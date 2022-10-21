@@ -84,7 +84,7 @@ actions:
   push-to-cs:
     - cmd[${this}]: |-
         rm -rf ${settings.gitProject}
-        git clone -b ${settings.gitBranch} --single-branch https://${settings.gitUser}:${settings.gitPswd}@git.jelastic.com/${settings.gitGroup}/${settings.gitProject}.git
+        git clone -b ${settings.gitBranch} --single-branch https:///git@github.com:jelastic/${settings.gitProject}.git
     - cmd[${this}]: pwd
     - script: |
         var customization = "ls.tokens";
