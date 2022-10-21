@@ -15,7 +15,7 @@ settings:
       caption: Git Branch
       name: gitBranch
       required: true
-      default: master
+      default: main
 
     - type: string
       caption: App Name
@@ -37,7 +37,7 @@ actions:
   push-to-git:
     - cmd[${this}]: |-
         rm -rf ${settings.gitProject}
-        git clone -b ${settings.gitBranch} --single-branch https:///git@github.com:jelastic/${settings.gitProject}.git
+        git clone -b ${settings.gitBranch} --single-branch https://github.com/jelastic/${settings.gitProject}.git
         cd ${settings.gitProject}
         git rm --ignore-unmatch -r cs        
     - cmd[${this}]: pwd
@@ -84,7 +84,7 @@ actions:
   push-to-cs:
     - cmd[${this}]: |-
         rm -rf ${settings.gitProject}
-        git clone -b ${settings.gitBranch} --single-branch https:///git@github.com:jelastic/${settings.gitProject}.git
+        git clone -b ${settings.gitBranch} --single-branch https://github.com/jelastic/${settings.gitProject}.git
     - cmd[${this}]: pwd
     - script: |
         var customization = "ls.tokens";
