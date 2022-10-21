@@ -6,24 +6,6 @@ name: Git and CS Bridge
 settings:
   fields: 
     - type: string
-      caption: Git User
-      name: gitUser
-      required: true
-      default:  
-
-    - type: string
-      caption: Git Token
-      name: gitPswd
-      required: true
-      default:  
-
-    - type: string
-      caption: Git Group
-      name: gitGroup
-      required: true
-      default: jps 
-
-    - type: string
       caption: Git Project
       name: gitProject
       required: true
@@ -55,7 +37,7 @@ actions:
   push-to-git:
     - cmd[${this}]: |-
         rm -rf ${settings.gitProject}
-        git clone -b ${settings.gitBranch} --single-branch https://${settings.gitUser}:${settings.gitPswd}@git.jelastic.com/${settings.gitGroup}/${settings.gitProject}.git
+        git clone -b ${settings.gitBranch} --single-branch https:///git@github.com:jelastic/${settings.gitProject}.git
         cd ${settings.gitProject}
         git rm --ignore-unmatch -r cs        
     - cmd[${this}]: pwd
