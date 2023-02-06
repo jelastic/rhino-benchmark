@@ -1,0 +1,228 @@
+type: install
+name: Rhino Benchmarks
+ 
+globals:
+  rhinoBenchmarksBaseUrl: https://raw.githubusercontent.com/mozilla/rhino/Rhino1_7_12_Release/testsrc/benchmarks
+
+onInstall:
+  - sunspider
+  - outputResults
+
+actions:
+  sunspider:
+    - deploySunSpiderBenchmark
+    - runSunSpiderBenchmark
+    - setGlobals:
+        sunspiderResults: ${response}
+        
+  v8bench:
+    - deployV8Benchmark
+    - runV8Benchmark
+    - setGlobals:
+        v8benchResults: ${response}
+  
+  outputResults: 
+    sunspiderResults: ${globals.sunspiderResults:}
+    v8benchResults: ${globals.v8benchResults:}
+    resultMarkdownTpl: |
+      ### ${name} Results
+      ${totalText} 
+      -
+      ${result}
+      -
+    totalTextTpl: |
+      Success: `${success}`  
+      Total Score: `${score}`  
+    sunspiderItemMarkdownTpl: |
+      > ${name}: `${time}`  
+    v8benchItemMarkdownTpl: |
+      > ${name}: `${score}`  
+    script: |
+      import org.apache.commons.lang3.text.StrSubstitutor
+      
+      let sunspiderResultsText = "", v8benchResultsResultsText = ""
+      
+      function _(text, params) { return new StrSubstitutor(params).replace(text) }
+      
+      function getResultText (name, resp, tpl) {
+        let text = ""
+        
+        if (resp.results) {
+          for (let result of resp.results) text += _(tpl, result)       
+          let totalText = resp.totalScore ? _(totalTextTpl, { success: resp.success || "", score: resp.totalScore }) : ""
+          text = _(resultMarkdownTpl, { name: name, result: text, totalText: totalText })
+        }
+        
+        return text
+      }
+      
+      sunspiderResults = sunspiderResults ? JSON.parse(sunspiderResults) : {}
+      v8benchResults = v8benchResults ? JSON.parse(v8benchResults) : {}
+      
+      return { 
+        result: 0, 
+        onAfterReturn: {
+          "return": {
+            type: "success",
+            message: getResultText("Sunspider", sunspiderResults, sunspiderItemMarkdownTpl) + 
+                     getResultText("V8bench", v8benchResults, v8benchItemMarkdownTpl),
+            data: { 
+              sunspiderResults: sunspiderResults,
+              v8benchResults: v8benchResults
+            }
+          }
+        }
+      };
+      
+  deploySunSpiderBenchmark:
+    - setGlobals:
+        baseUrl: ${globals.rhinoBenchmarksBaseUrl}/sunspider-0.9.1/
+        baseDir: rhino-benchmark.sunspider-0-9-1
+        
+    - updateAppScriptByUrl:
+        - name: 3d-cube
+        - name: 3d-morph
+        - name: 3d-raytrace
+        - name: access-binary-trees
+        - name: access-fannkuch
+        - name: access-nbody
+        - name: access-nsieve
+        - name: bitops-3bit-bits-in-byte
+        - name: bitops-bits-in-byte
+        - name: bitops-bitwise-and
+        - name: bitops-nsieve-bits
+        - name: controlflow-recursive
+        - name: crypto-aes
+        - name: crypto-md5
+        - name: crypto-sha1
+        - name: date-format-tofte
+        - name: date-format-xparb
+        - name: math-cordic
+        - name: math-partial-sums
+        - name: math-spectral-norm
+        - name: regexp-dna
+        - name: string-base64
+        - name: string-fasta
+        - name: string-tagcloud
+        - name: string-unpack-code
+        - name: string-validate-input
+  
+  runSunSpiderBenchmark:
+    - script: |
+        let tests = [
+            "3d-cube", "3d-morph", "3d-raytrace",
+            "access-binary-trees", "access-fannkuch", "access-nbody", "access-nsieve",
+            "bitops-3bit-bits-in-byte", "bitops-bits-in-byte", "bitops-bitwise-and", "bitops-nsieve-bits",
+            "controlflow-recursive", "crypto-aes", "crypto-md5", "crypto-sha1",
+            "date-format-tofte", "date-format-xparb",
+            "math-cordic", "math-partial-sums", "math-spectral-norm",
+            "regexp-dna",
+            "string-base64", "string-fasta", "string-tagcloud", "string-unpack-code", "string-validate-input"
+        ]
+
+        let batchRequest = {
+            alias : { m : "Development.Scripting.Eval" },
+            global : { appid: appid, session: session },
+            methods : []
+        }
+
+        for (let test of tests)
+            batchRequest.methods.push({ m: { script: "${this.baseDir:[globals.baseDir]}." + test }})
+
+        let resp = api.utils.batch.Call(toJSON(batchRequest));
+        if (resp.result != 0) return resp;
+
+        let results = [];
+
+        for (let i = 0, n = tests.length; i < n; i++)
+            results.push({ name: tests[i], time: resp.response[i].time })
+        
+        return { result: 0, results: results };
+
+  deployV8Benchmark:
+    - setGlobals:
+        baseUrl: ${globals.rhinoBenchmarksBaseUrl}/v8-benchmarks-v6/
+        baseDir: rhino-benchmark.v8-benchmarks-v6
+        
+    - updateAppScriptByUrl:
+        - name: base
+        - name: richards
+        - name: deltablue
+        - name: crypto
+        - name: raytrace
+        #- name: earley-boyer
+        #- name: regexp
+        #- name: splay
+
+  runV8Benchmark: 
+    script: |
+      include_once com.hivext.scripting.${this.baseDir:[globals.baseDir]}.base;
+      include_once com.hivext.scripting.${this.baseDir:[globals.baseDir]}.richards;
+      include_once com.hivext.scripting.${this.baseDir:[globals.baseDir]}.deltablue;
+      include_once com.hivext.scripting.${this.baseDir:[globals.baseDir]}.crypto;
+      include_once com.hivext.scripting.${this.baseDir:[globals.baseDir]}.raytrace;
+      
+      //nclude_once com.hivext.scripting.${this.baseDir:[globals.baseDir]}.earley-boyer;
+      //nclude_once com.hivext.scripting.${this.baseDir:[globals.baseDir]}.regexp;
+      //nclude_once com.hivext.scripting.${this.baseDir:[globals.baseDir]}.splay;
+      
+      var success = true, results = [], lastScore
+
+      function onResult(name, result) {
+        api.marketplace.console.WriteLog(name + ': ' + result)
+        results.push({ name: name, score: result })  
+      }
+
+      function onError(name, error) {
+        onResult(name, error)
+        success = false
+      }
+
+      function onScore(score) {
+        lastScore = score
+        
+        if (success)
+          api.marketplace.console.WriteLog('Score (version ' + BenchmarkSuite.version + '): ' + score)
+      }
+
+      var runs = 1
+
+      for (let i = 1; i <= runs; i++) {
+        BenchmarkSuite.RunSuites({ NotifyResult:onResult,
+                                   NotifyError: onError,
+                                   NotifyScore: onScore })
+      }
+
+      return { result: 0, success: success, results: results, totalScore: lastScore }
+
+  updateAppScriptByUrl:
+    name: ${this.name}
+    url: ${this.url:}
+    baseUrl: ${this.baseUrl:}
+    baseDir: ${this.baseDir:}
+    script: |
+      import com.hivext.api.core.utils.Transport
+      import com.hivext.api.Response
+
+      let code
+
+      url = url || (name + ".js")
+      url = /https?:/.test(url) ? url : (baseUrl || "${globals.baseUrl:}") + url
+      name = (baseDir || "${globals.baseDir:}") + "." + name
+
+      try {
+          code = String(new Transport().get(url + '?_r=' + Math.random()))
+      } catch (ex) {
+          return { result: Response.ERROR_UNKNOWN, error: "can't download file: " + url, message: ex }
+      }
+      
+      let resp = api.dev.scripting.GetScript(appid, session, name)
+
+      if (resp.result == Response.SCRIPT_NOT_FOUND) {
+          resp = api.dev.scripting.CreateScript(name, "js", code)
+      } else if (resp.result == 0) {
+          resp = api.dev.scripting.ChangeScript(name, "code", code)
+      }
+
+      return api.dev.scripting.Build(name)
+      
